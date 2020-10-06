@@ -1,12 +1,15 @@
 {
   "name": "lazaretto",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Run esm and/or cjs code in a separate V8 isolate with code-injection capabilities",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["isolate", "code injection"],
+  "keywords": [
+    "isolate",
+    "code injection"
+  ],
   "author": "David Mark Clements (@davidmarkclem)",
   "license": "MIT",
   "repository": {
