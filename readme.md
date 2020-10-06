@@ -14,7 +14,7 @@ Experimental
 ## About
 
 Lazaretto is for circumstances where you want to execute isolated code that is fully interopable with 
-either of Node's module systems while also being able to dyanmically run expressions inside that code. 
+either of Node's module systems while also being able to dynamically run expressions inside that code. 
 This authors use-case is a sort of white-box testing (which is generally not recommended), but which is 
 necessary for evaluating exam questions for the OpenJS Certifications. Lazaretto should not be relied on
 for completely safe isolation, the file system and so forth can still be accessed so you still need 
@@ -52,7 +52,7 @@ We would set the `scope` option to `['fn']`.
 
 #### `sandbox` <(expression: String) => result)>
 
-Lazretto returns a promise that resolves to a sandbox function. Pass it an expression to evaluate. 
+Lazaretto returns a promise that resolves to a sandbox function. Pass it an expression to evaluate. 
 
 Imagine a file stored at `/path/to/file.mjs` which contains
 
