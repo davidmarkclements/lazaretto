@@ -13,7 +13,7 @@ Experimental
 
 ## About
 
-Lazaretto is for circumstances where you want execute to isolated code that is fully interopable with 
+Lazaretto is for circumstances where you want to execute isolated code that is fully interopable with 
 either of Node's module systems while also being able to dyanmically run expressions inside that code. 
 This authors use-case is a sort of white-box testing (which is generally not recommended), but which is 
 necessary for evaluating exam questions for the OpenJS Certifications. Lazaretto should not be relied on
