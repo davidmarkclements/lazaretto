@@ -6,7 +6,7 @@ const { readFile } = require('fs').promises
 const { Worker}  = require('worker_threads')
 const cp = require('child_process')
 
-async function lazaretto ({ esm = false, entry, scope = [] } = {}) {
+async function lazaretto ({ esm = false, entry, scope = [], ...opts } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
   const scopeParams = scope.length ? scope.map((ref) => {
     if (typeof ref === 'string') return `'${ref}'`
@@ -62,9 +62,10 @@ async function lazaretto ({ esm = false, entry, scope = [] } = {}) {
     process.env.LAZARETTO_LOADER_RELATIVE_DIR = relativeDir
   }
 
-  const worker = new Worker(exec, { 
+  const worker = new Worker(exec, {
+    ...opts,
     eval: !esm,
-    execArgv: esm ? [...process.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'loader.mjs')}`] : process.execArgv
+    execArgv: esm ? [...process.execArgv, ...opts.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'loader.mjs')}`] : process.execArgv
    })
   await hook('init')
 

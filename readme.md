@@ -13,7 +13,7 @@ Experimental
 
 ## About
 
-Lazaretto is for circumstances where you want to execute isolated code that is fully interopable with 
+Lazaretto is for circumstances where you want to execute` isolated code that is fully interopable with 
 either of Node's module systems while also being able to dyanmically run expressions inside that code. 
 This authors use-case is a sort of white-box testing (which is generally not recommended), but which is 
 necessary for evaluating exam questions for the OpenJS Certifications. Lazaretto should not be relied on
@@ -30,7 +30,7 @@ const lazaretto = require('lazaretto')
 import lazaretto from 'lazaretto'
 ```
 
-### `await lazaretto({ esm = false, entry, scope }) => sandbox <(expression: String) => result)>`
+### `await lazaretto({ esm = false, entry, scope, ...opts }) => sandbox <(expression: String) => result)>`
 
 #### Options
 
@@ -48,6 +48,10 @@ The entry-point file, must be an absolute path.
 A list of references that we want to have in scope for running dynamic expressions. It can only access references in the outer module scope.
 For instance, let's say we want to run code in a sandbox that has a function named `fn`, and then we want to call `fn` and get the result.
 We would set the `scope` option to `['fn']`. 
+
+##### `...opts`
+
+Any additional options will be passed into the [`Worker`](https://nodejs.org/dist/latest-v14.x/docs/api/worker_threads.html#worker_threads_new_worker_filename_options) constructor
 
 
 #### `sandbox` <(expression: String) => result)>
