@@ -30,7 +30,7 @@ const lazaretto = require('lazaretto')
 import lazaretto from 'lazaretto'
 ```
 
-### `await lazaretto({ esm = false, entry, scope, ...opts }) => sandbox <(expression: String) => result)>`
+### `await lazaretto({ esm = false, entry, scope, prefix, suffix, ...opts }) => sandbox <(expression: String) => result)>`
 
 #### Options
 
@@ -48,6 +48,17 @@ The entry-point file, must be an absolute path.
 A list of references that we want to have in scope for running dynamic expressions. It can only access references in the outer module scope.
 For instance, let's say we want to run code in a sandbox that has a function named `fn`, and then we want to call `fn` and get the result.
 We would set the `scope` option to `['fn']`. 
+
+
+##### `prefix` - String, default: ''
+
+Inject code at the top of `entry` contents prior to execution.
+
+
+##### `suffix` - String, default: ''
+
+Inject code at the bottom of `entry` contents prior to execution.
+
 
 ##### `...opts`
 

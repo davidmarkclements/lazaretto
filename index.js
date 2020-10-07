@@ -6,7 +6,7 @@ const { readFile } = require('fs').promises
 const { Worker}  = require('worker_threads')
 const cp = require('child_process')
 
-async function lazaretto ({ esm = false, entry, scope = [], ...opts } = {}) {
+async function lazaretto ({ esm = false, entry, scope = [], prefix = '', suffix = '', ...opts } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
   const scopeParams = scope.length ? scope.map((ref) => {
     if (typeof ref === 'string') return `'${ref}'`
@@ -51,7 +51,7 @@ async function lazaretto ({ esm = false, entry, scope = [], ...opts } = {}) {
     })
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
-  const code = `${comms}${contents}`
+  const code = `${prefix}${comms}${contents}${suffix}`
 
   const exec = esm ?
     new URL(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`) :
