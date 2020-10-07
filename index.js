@@ -65,7 +65,7 @@ async function lazaretto ({ esm = false, entry, scope = [], prefix = '', suffix 
   const worker = new Worker(exec, {
     ...opts,
     eval: !esm,
-    execArgv: esm ? [...process.execArgv, ...opts.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'loader.mjs')}`] : process.execArgv
+    execArgv: esm ? [...process.execArgv, ...(opts.execArgv || []), '--no-warnings', `--experimental-loader=${join(__dirname, 'loader.mjs')}`] : process.execArgv
    })
   await hook('init')
 
