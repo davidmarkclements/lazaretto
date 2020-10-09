@@ -87,7 +87,38 @@ this state will then be available in the main thread at [`sandbox.context`](#san
 
 For all handler function except module-scoped, there is an `api.include` function. This works in a similar
 way to [Dynamic Import](https://wiki.developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#Dynamic_Imports), 
-except it smooths over the `default` ugliness.
+except it smooths over the `default` ugliness and it's relative to the `entry` file:
+
+```js
+  const mock = {
+    async fs (fs, { include }) {
+      const stream = await include('stream')
+      return {
+        __proto__: stream,
+        createReadStream() { 
+          return stream.Readable.from(['totally', 'mocked'])
+        }
+      }
+    }
+  }
+  const sandbox = await lazaretto({ esm, entry, mock })
+```
+
+For module-scoped functions, there's `api.require` which is a `require` function that performs lookups
+relative to the `entry` file:
+
+```js
+  const mock = {
+    __filename (__filename, { require }) {
+      const path = require('path')
+      return path.join(path.dirname(__filename), 'override.js')
+    }
+  }
+  const sandbox = await lazaretto({ esm, entry, mock })
+```
+
+**IMPORTANT, READ THIS**: the handler function are serialized and then executed inside the worker thread. This means
+these functions will not be able to access any closure scope references since they are recompiled in a separate environment.
 
 
 ##### `context` - Object, default: {}
