@@ -6,6 +6,7 @@ const { readFile } = require('fs').promises
 const { Worker } = require('worker_threads')
 const mockery = require('./lib/mockery')
 const cp = require('child_process')
+const timeout = promisify(setTimeout)
 
 async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, prefix = '' } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
@@ -74,7 +75,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const code = `${prefix}${comms}${wrapped}`
   const exec = esm
     ? new URL(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
-    : code
+    : new URL(`data:cjs;${entry},${Buffer.from(code).toString('base64')}`)
 
   if (esm) {
     process.env.LAZARETTO_LOADER_DATA_URL = exec.href
@@ -84,11 +85,8 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   if (mocking) process.env.LAZARETTO_OVERRIDES = JSON.stringify(mocking)
 
   const worker = new Worker(exec, {
-    eval: !esm,
     workerData: { context },
-    execArgv: esm
-      ? [...process.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`]
-      : [...process.execArgv, '--no-warnings', '-r', `${join(__dirname, 'lib', 'preload.js')}`]
+    execArgv: [...process.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`]
   })
 
   worker.on('message', ([cmd, o]) => {
@@ -105,13 +103,14 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
   sandbox.context = context
 
-  sandbox.fin = () => {
+  sandbox.fin = async () => {
     if (esm) {
       delete process.env.LAZARETTO_LOADER_DATA_URL
       delete process.env.LAZARETTO_LOADER_RELATIVE_DIR
     }
-    worker.terminate()
+    return worker.terminate()
   }
+
   return sandbox
 
   function hook (cmd, args = []) {
@@ -147,7 +146,8 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
           if (frame) {
             const line = esm ? +frame.split(':')[2] : +frame.split(':')[1]
-            const msgRx = RegExp(err.message)
+            const escrx = require('escape-string-regexp') // lazy require
+            const msgRx = RegExp(escrx(err.message))
             const banner = stack.find((line) => msgRx.test(line))
             err = Object.create(err)
 
