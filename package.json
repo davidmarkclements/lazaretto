@@ -1,6 +1,6 @@
 {
   "name": "lazaretto",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Run esm and/or cjs code in a separate V8 isolate with code-injection capabilities",
   "main": "index.js",
   "scripts": {
