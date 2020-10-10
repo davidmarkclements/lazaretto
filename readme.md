@@ -130,7 +130,7 @@ Sets the initial context that is then passed to mock handler functions. See [`sa
 Inject code at the top of `entry` contents prior to execution.
 
 
-#### `sandbox(expression, args) => result)`
+#### `sandbox(expression, args) => Promise<result>`
 
 Lazretto returns a promise that resolves to a sandbox function. Pass it an expression to evaluate. 
 
@@ -147,7 +147,7 @@ The file can be evaluated with Lazaretto like so:
 import assert from 'assert'
 import lazaretto from 'lazaretto'
 const sandbox = await lazaretto({ esm: true, entry: '/path/to/file.mjs', scope: ['fn'] })
-assert.strict.equal(sandbox(`fn(true)`), true)
+assert.strict.equal(await sandbox(`fn(true)`), true)
 ```
 
 There are two implicit references available in sandbox expressions: `exports` and `$$args$$`
@@ -158,8 +158,8 @@ The `exports` reference holds the exports for `entry` file:
 import assert from 'assert'
 import lazaretto from 'lazaretto'
 const sandbox = await lazaretto({ esm: true, entry: '/path/to/file.mjs', scope: ['fn'] })
-assert.strict.equal(sandbox(`exports.func(42)`), 42)
-assert.strict.equal(sandbox(`exports.func === fn`), true)
+assert.strict.equal(await sandbox(`exports.func(42)`), 42)
+assert.strict.equal(await sandbox(`exports.func === fn`), true)
 ```
 
 The `$$args$$` reference holds a clone of the arguments passed to the sandbox after the expression: 
@@ -168,8 +168,8 @@ The `$$args$$` reference holds a clone of the arguments passed to the sandbox af
 import assert from 'assert'
 import lazaretto from 'lazaretto'
 const sandbox = await lazaretto({ esm: true, entry: '/path/to/file.mjs', scope: ['fn'] })
-assert.strict.equal(sandbox(`exports.func(...$$args$$)`, 'wow'), 'wow')
-assert.strict.equal(sandbox(`fn(...$$args$$)`, 'again'), 'again')
+assert.strict.equal(await sandbox(`exports.func(...$$args$$)`, 'wow'), 'wow')
+assert.strict.equal(await sandbox(`fn(...$$args$$)`, 'again'), 'again')
 ```
 
 Data return from evaluating an expression in the sandbox is cloned from the isolate thread according to the [HTML structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) which means you can't return functions, and a Node `Buffer` will be cloned as a `Uint8Array` - see https://nodejs.org/api/worker_threads.html#worker_threads_considerations_when_transferring_typedarrays_and_buffers.
