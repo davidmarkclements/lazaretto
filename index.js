@@ -6,7 +6,6 @@ const { readFile } = require('fs').promises
 const { Worker } = require('worker_threads')
 const mockery = require('./lib/mockery')
 const cp = require('child_process')
-const timeout = promisify(setTimeout)
 
 async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, prefix = '' } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
@@ -31,48 +30,25 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const entryUrl = pathToFileURL(entry).href
   const include = esm ? 'await import' : 'require'
   const mocking = mockery(mock, { esm, entry })
-  const shims = (esm ? `
-    import.meta.url = '${entryUrl}';
-    global[Symbol.for('kLazarettoImportMeta')] = import.meta
-  ` : `
-    module.path = __dirname = '${relativeDir}'
-    module.id = module.filename = __filename = '${entry}'
-    require = require('module').createRequire(__filename)
-    require.main = module
-    module.require = require
-    module.paths = require.resolve.paths(__filename)
-    ${mocking ? mocking.scopeMocks() : ''}
-  `).split('\n').map((s) => s.trim() + ';').join('')
+  const shims = esm
+    ? `import.meta.url = '${entryUrl}';global[Symbol.for('kLazarettoImportMeta')] = import.meta;`
+    : `module.id = '.'; module.parent = null; require.main = module;${mocking ? mocking.scopeMocks() : ''}`
   const comms = `
-    ${shims}
     {
-      const { parentPort } = ${include}('worker_threads')
-      parentPort.on${esm ? '' : 'ce'}('message', ([cmd, args]) => {
-        if (cmd === 'init') {
-          ${esm ? '' : 'global[Symbol.for(\'kLazarettoInit\')]()'}
-          parentPort.postMessage(['init'])
-        }
-        ${esm ? `if (cmd === 'expr') {
+      (${include}('worker_threads')).parentPort.on('message', function ([cmd, args]) {
+        if (cmd === 'init')this.postMessage(['init'])
+        if (cmd === 'expr') {
           const expr = args.shift()
           const fn = new Function(${scopeParams}'return ' + expr)
-          parentPort.postMessage([cmd, fn(${scopeArgs})])
-        }` : ''}
+          this.postMessage([cmd, fn(${scopeArgs})])
+        }
       })
     }
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
-  const wrapped = esm ? contents : `global[Symbol.for('kLazarettoInit')] = () => {
-    {
-      const { parentPort } = require('worker_threads')
-      parentPort.on('message', ([cmd, args]) => {
-        if (cmd === 'expr') {
-          const expr = args.shift()
-          const fn = new Function(${scopeParams}'return ' + expr)
-          parentPort.postMessage([cmd, fn(${scopeArgs})])
-        }
-      })
-    }`.split('\n').map((s) => s.trim() + ';').join('') + contents + '\n}'
-  const code = `${prefix}${comms}${wrapped}`
+
+  const code = `${prefix}${shims}${comms}${contents}`
+
   const exec = esm
     ? new URL(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
     : new URL(`data:cjs;${entry},${Buffer.from(code).toString('base64')}`)
@@ -86,7 +62,11 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
   const worker = new Worker(exec, {
     workerData: { context },
-    execArgv: [...process.execArgv, '--no-warnings', `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`]
+    execArgv: [
+      ...process.execArgv,
+      '--no-warnings',
+      `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`
+    ]
   })
 
   worker.on('message', ([cmd, o]) => {
