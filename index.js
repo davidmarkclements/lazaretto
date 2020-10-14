@@ -26,29 +26,34 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const comms = `
     {
       const vm = ${include}('vm')
-      (${include}('worker_threads')).parentPort.on('message', function ([cmd, args]) {
-        if (cmd === 'init') this.postMessage(['init'])
-        if (cmd === 'expr') {
-          const expr = args.shift()
-          const script = new vm.Script(expr, {filename: 'Lazaretto'})
-          const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
-          const exports = global[Symbol.for('kLazarettoEntryModule')] ? new Proxy(global[Symbol.for('kLazarettoEntryModule')], {get:(o, p) => 'p' in o ? o[p] : (o.default ? o.default[p] : undefined)}) : module.exports
-          let result = script.runInNewContext({...thisContext,...(${scoping}), exports, $$args$$: args})
-          if (result === exports) {
-            result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
-          }
-          try { 
-            this.postMessage([cmd, result])
-          } catch (err) {
-            if (err.name === 'DataCloneError') {
-              const e = Error(err.message)
-              e.name = 'DataCloneError'
-              throw e
+      const wt = ${include}('worker_threads')
+      async function cmds ([cmd, args] = []) {
+        try {
+          if (cmd === 'init') this.postMessage([cmd])
+          if (cmd === 'sync') this.postMessage([cmd, wt.workerData.context])
+          if (cmd === 'expr') {
+            const expr = args.shift()
+            const script = new vm.Script(expr, {filename: 'Lazaretto'})
+            const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
+            const exports = global[Symbol.for('kLazarettoEntryModule')] ? new Proxy(global[Symbol.for('kLazarettoEntryModule')], {get:(o, p) => 'p' in o ? o[p] : (o.default ? o.default[p] : undefined)}) : module.exports
+            let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { args, context: global[Symbol.for('kLazarettoContext')]}})
+            if (result === exports) {
+              result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
             }
-            throw err
+            this.postMessage([cmd, result])
           }
+        } catch (err) {
+          if (err.name === 'DataCloneError') {
+            const e = Error(err.message)
+            e.name = 'DataCloneError'
+            throw e
+          }
+          
+          this.postMessage(['err', err, cmd, ...args])
+
         }
-      })
+      }
+      wt.parentPort.on('message', cmds)
     }
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
@@ -74,10 +79,14 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`
     ]
   })
-
+  let exited = false
   worker.on('message', ([cmd, o]) => {
     if (cmd !== 'context') return
     Object.assign(context, o)
+  })
+
+  worker.on('exit', () => {
+    exited = true
   })
 
   await hook('init')
@@ -94,7 +103,10 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       delete process.env.LAZARETTO_LOADER_DATA_URL
       delete process.env.LAZARETTO_LOADER_RELATIVE_DIR
     }
-    return worker.terminate()
+    if (exited) throw Error('Sandbox already finished')
+    const [ctx] = await hook('sync')
+    Object.assign(context, ctx)
+    await worker.terminate()
   }
 
   return sandbox
@@ -103,6 +115,10 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     return promisify((worker, cb) => {
       let done = false
       const msg = ([cmdIn, ...args]) => {
+        if (cmdIn === 'err') {
+          error(args[0])
+          return
+        }
         if (cmdIn !== cmd) return
         worker.removeListener('error', error)
         if (done === false) {
