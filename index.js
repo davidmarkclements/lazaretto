@@ -27,6 +27,8 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     {
       const vm = ${include}('vm')
       const wt = ${include}('worker_threads')
+      const createInclude = ${include}('${require.resolve('./lib/include')}')
+      const include = createInclude('${entry}')
       async function cmds ([cmd, args] = []) {
         try {
           if (cmd === 'init') this.postMessage([cmd])
@@ -36,7 +38,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
             const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
             const exports = global[Symbol.for('kLazarettoEntryModule')] ? new Proxy(global[Symbol.for('kLazarettoEntryModule')], {get:(o, p) => 'p' in o ? o[p] : (o.default ? o.default[p] : undefined)}) : module.exports
-            let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { args, context: global[Symbol.for('kLazarettoContext')]}})
+            let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { include, args, context: global[Symbol.for('kLazarettoContext')]}})
             if (result === exports) {
               result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
             }
