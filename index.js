@@ -45,7 +45,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
                 return 'p' in mod ? mod[p] : (mod.default ? mod.default[p] : undefined)
               }})
             } else { 
-              exports = modules.exports
+              exports = module.exports
             }
             let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { include, args, context: global[Symbol.for('kLazarettoContext')]}})
             if (result === exports) {
