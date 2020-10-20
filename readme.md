@@ -2,14 +2,9 @@
 
 > Run esm and/or cjs code in a separate V8 isolate with code-injection capabilities
 
-## Status
-
-Experimental
-
 ## Support
 
 * Node 14+
-* Might work on Node 12, but that is not supported nor tested
 
 ## About
 
@@ -217,11 +212,6 @@ Any state stored on context is passed between the main thread and the worker thr
 is used to synchronize the main and worker thread context objects. Therefore functions cannot be transferred and there
 are caveats around how to handle buffers.
 
-
-## Todo
-
-* tests
-* browser support?
 
 ## License
 
