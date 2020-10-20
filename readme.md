@@ -94,7 +94,7 @@ except it smooths over the `default` ugliness and it's relative to the `entry` f
     async fs (fs, { include }) {
       const stream = await include('stream')
       return {
-        __proto__: stream,
+        __proto__: fs,
         createReadStream() { 
           return stream.Readable.from(['totally', 'mocked'])
         }
@@ -120,6 +120,41 @@ relative to the `entry` file:
 **IMPORTANT, READ THIS**: the handler function are serialized and then executed inside the worker thread. This means
 these functions will not be able to access any closure scope references since they are recompiled in a separate environment.
 
+###### Implicit mocks
+
+Some globals are also core modules, for instance, `process` and `console`. When these specified in the `mock` object both the global
+and the module will be mocked. However, if a module named `process` or `console` is installed as a dependency, that will be mocked instead.
+
+Some globals are present as methods in core modules. For instance the `Buffer` global is also exported from the `buffer` module,
+and `setTimeout` is exported from `timers` etc. Globals that are parts of other modules will be mocked within those
+modules when mocked, unless the module is *also* mocked in which case the export of the mocked module method will
+be different from the mocked global.
+
+For example, if `setTimeout` mock is created the `timers.setTimeout` export will also be mocked the same. However if both `timers` and `setTimeout` is mocked, the `setTimeout` export on `timers` will be prescribed by the `timers` mock.
+
+Core modules can also have a `<name>/promises` path that exports promisified versions of the module's API which is also available on the as the `promises` property of that module. Currently only the `fs` module that does this. When a method on `fs.promises` is mocked, that method is also mocked on `fs/promises`. For instance given the following: 
+
+```js
+  const mock = {
+    async fs (fs, { include }) {
+      const { promisify } = await include('util')
+      const readFile = (file, cb) => {
+        process.nextTick(() => cb(null, Buffer.from('test')))
+      }
+      return {
+        __proto__: fs,
+        readFile,
+        promisies: {
+          readFile: promisify(readFile)
+        }
+      }
+    }
+  }
+  const sandbox = await lazaretto({ esm, entry, mock })
+```
+
+The `fs.promises.readFile` function has been mocked, so if `fs/promises` is required or imported it's `readFile` method
+will be the same as `fs.promises.readFile`.
 
 ##### `context` - Object, default: {}
 
