@@ -1,6 +1,6 @@
 'use strict'
 const { pathToFileURL } = require('url')
-const { dirname, join } = require('path')
+const { join } = require('path')
 const { promisify } = require('util')
 const { readFile } = require('fs').promises
 const { Worker } = require('worker_threads')
@@ -16,7 +16,6 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     }
     return scoping
   }, '{') + '}'
-  const relativeDir = dirname(entry)
   const entryUrl = pathToFileURL(entry).href
   const include = esm ? 'await import' : 'require'
   const mocking = mockery(mock, { esm, entry })
@@ -32,7 +31,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       async function cmds ([cmd, args] = []) {
         try {
           if (cmd === 'init') this.postMessage([cmd])
-          if (cmd === 'sync') this.postMessage([cmd, wt.workerData.context])
+          if (cmd === 'sync') this.postMessage([cmd, wt.workerData.context, Array.from(global[Symbol.for('kLazarettoMocksLoaded')])])
           if (cmd === 'expr') {
             const expr = args.shift()
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
@@ -77,11 +76,10 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
   if (esm) {
     process.env.LAZARETTO_LOADER_DATA_URL = exec.href
-    process.env.LAZARETTO_LOADER_RELATIVE_DIR = relativeDir
   }
+  process.env.LAZARETTO_LOADER_ENTRY = entry
 
   if (mocking) process.env.LAZARETTO_OVERRIDES = JSON.stringify(mocking)
-
   const worker = new Worker(exec, {
     workerData: { context },
     execArgv: [
@@ -108,15 +106,17 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   }
 
   sandbox.context = context
+  sandbox.mocksLoaded = null
 
   sandbox.fin = async () => {
     if (esm) {
       delete process.env.LAZARETTO_LOADER_DATA_URL
-      delete process.env.LAZARETTO_LOADER_RELATIVE_DIR
+      delete process.env.LAZARETTO_LOADER_ENTRY
     }
     if (exited) throw Error('Sandbox already finished')
-    const [ctx] = await hook('sync')
+    const [ctx, mocksLoaded] = await hook('sync')
     Object.assign(context, ctx)
+    sandbox.mocksLoaded = mocksLoaded
     await worker.terminate()
   }
 

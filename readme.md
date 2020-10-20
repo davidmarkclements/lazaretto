@@ -212,6 +212,10 @@ Any state stored on context is passed between the main thread and the worker thr
 is used to synchronize the main and worker thread context objects. Therefore functions cannot be transferred and there
 are caveats around how to handle buffers.
 
+##### `sandbox.mocksLoaded` - Array
+
+The `sandbox.mocksLoaded` will be `null` until after `sandbox.fin()` is called. Afterwards it will be an array of
+names (or paths in some cases) of mocks that were required or imported during execution.
 
 ## License
 
