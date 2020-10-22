@@ -7,8 +7,11 @@ const { Worker } = require('worker_threads')
 const mockery = require('./lib/mockery')
 const cp = require('child_process')
 
-async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, teardown, prefix = '' } = {}) {
+async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, teardown, returnOnError = false, prefix = '' } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
+
+  if (returnOnError === true) returnOnError = (err) => err
+
   const scoping = scope.reduce((scoping, ref) => {
     if (typeof ref === 'string') scoping += `${ref},`
     if (ref !== null && typeof ref === 'object') {
@@ -104,8 +107,16 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   online = true
 
   const sandbox = async (code, ...args) => {
-    const [result] = await hook('expr', [code, ...args])
-    return result
+    if (returnOnError === false) {
+      const [result] = await hook('expr', [code, ...args])
+      return result
+    }
+    try {
+      const [result] = await hook('expr', [code, ...args])
+      return result
+    } catch (err) {
+      return returnOnError(err)
+    }
   }
 
   sandbox.context = context

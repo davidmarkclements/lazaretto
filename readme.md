@@ -159,6 +159,13 @@ Sets the initial context that is then passed to mock handler functions. See [`sa
 
 Inject code at the top of `entry` contents prior to execution.
 
+##### `returnOnError` - Function or Boolean, default: false
+
+If `false` then the `sandbox` function will propagate the error. 
+If `true` then the `sandbox` function will return a relevant error object if a particular expression causes a throw or rejection.
+If a function then the `sandbox` function will return the result of passing the error to the `returnOnError` function.
+
+
 ##### `teardown` - Function, default: undefined
 
 A function that takes a cleanup function (which may be an async function) that should be triggered outside of Lazaretto.
