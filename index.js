@@ -7,7 +7,7 @@ const { Worker } = require('worker_threads')
 const mockery = require('./lib/mockery')
 const cp = require('child_process')
 
-async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, prefix = '' } = {}) {
+async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, teardown, prefix = '' } = {}) {
   if (Array.isArray(scope) === false) scope = [scope]
   const scoping = scope.reduce((scoping, ref) => {
     if (typeof ref === 'string') scoping += `${ref},`
@@ -88,17 +88,20 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`
     ]
   })
-  let exited = false
+  let online = false
+
   worker.on('message', ([cmd, o]) => {
     if (cmd !== 'context') return
     Object.assign(context, o)
   })
 
   worker.on('exit', () => {
-    exited = true
+    online = false
   })
 
   await hook('init')
+
+  online = true
 
   const sandbox = async (code, ...args) => {
     const [result] = await hook('expr', [code, ...args])
@@ -109,16 +112,18 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   sandbox.mocksLoaded = null
 
   sandbox.fin = async () => {
-    if (exited) return
     if (esm) {
       delete process.env.LAZARETTO_LOADER_DATA_URL
       delete process.env.LAZARETTO_LOADER_ENTRY
     }
+    if (online === false) return
     const [ctx, mocksLoaded] = await hook('sync')
     Object.assign(context, ctx)
     sandbox.mocksLoaded = mocksLoaded
     await worker.terminate()
   }
+
+  if (typeof teardown === 'function') teardown(sandbox.fin)
 
   return sandbox
 

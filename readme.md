@@ -25,7 +25,7 @@ const lazaretto = require('lazaretto')
 import lazaretto from 'lazaretto'
 ```
 
-### `await lazaretto({ esm = false, entry, scope, mock, context, prefix }) => sandbox <(expression: String) => result)>`
+### `await lazaretto({ esm = false, entry, scope, mock, context, teardown, prefix }) => sandbox <(expression: String) => result)>`
 
 #### Options
 
@@ -158,6 +158,40 @@ Sets the initial context that is then passed to mock handler functions. See [`sa
 ##### `prefix` - String, default: ''
 
 Inject code at the top of `entry` contents prior to execution.
+
+##### `teardown` - Function, default: undefined
+
+A function that takes a cleanup function (which may be an async function) that should be triggered outside of Lazaretto.
+
+For instance: 
+
+```js
+import lazaretto from 'lazaretto'
+let cleanup = () => {}
+function teardown (fn) {
+  cleanup = fn
+}
+try {
+  const sandbox = await lazaretto({ esm: true, entry: '/path/to/file.mjs', teardown })
+  sandbox('someFunctionThatMightError()')
+  await sandbox.fin()
+} catch (err) {
+  await cleanup()
+}
+```
+
+This is useful when using Lazaretto with a test framework, such as `tap`, for instance: 
+
+```js
+import tap from 'tap'
+import lazaretto from 'lazaretto'
+
+test('something', async ({ is, teardown }) => {
+  const sandbox = await lazaretto({ esm: true, entry: '/path/to/file.mjs', teardown })
+  is(sandbox('someFunctionThatMightError()'), true)
+  await sandbox.fin()
+})
+```
 
 
 #### `sandbox(expression, args) => Promise<result>`
