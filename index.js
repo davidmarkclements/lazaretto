@@ -109,11 +109,11 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   sandbox.mocksLoaded = null
 
   sandbox.fin = async () => {
+    if (exited) return
     if (esm) {
       delete process.env.LAZARETTO_LOADER_DATA_URL
       delete process.env.LAZARETTO_LOADER_ENTRY
     }
-    if (exited) throw Error('Sandbox already finished')
     const [ctx, mocksLoaded] = await hook('sync')
     Object.assign(context, ctx)
     sandbox.mocksLoaded = mocksLoaded
