@@ -25,6 +25,15 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const shims = esm
     ? `import.meta.url = '${entryUrl}';global[Symbol.for('kLazarettoImportMeta')] = import.meta;`
     : `module.id = '.'; module.parent = null; require.main = module;${mocking ? mocking.scopeMocks() : ''};`
+  const overrides = `
+    process.chdir = () => {
+      process.stderr.write('Lazaretto: process.chdir is not supported\\n')
+    }
+    process.abort = () => {
+      process.stderr.write('Lazeretto: Abort is not supported but will exit\\n' + Error().stack + '\\n')
+      process.exit(1)
+    }
+  `
   const comms = `
     {
       const vm = ${include}('vm')
@@ -71,7 +80,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
 
-  const code = `${prefix}${shims}${comms}${contents}`
+  const code = `${prefix}${overrides}${shims}${comms}${contents}`
   const base64 = Buffer.from(code).toString('base64')
   const exec = esm
     ? new URL(`data:esm;${entry},${base64}`)
