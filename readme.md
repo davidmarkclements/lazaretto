@@ -11,7 +11,7 @@
 Lazaretto is for circumstances where you want to execute isolated code that is fully interopable with 
 either of Node's module systems while also being able to dynamically run expressions inside that code. 
 This authors use-case is a sort of white-box testing (which is generally not recommended), but which is 
-necessary for evaluating exam questions for the OpenJS Certifications. Lazaretto should not be relied on
+necessary for evaluating exam questions for the OpenJS Certifica tions. Lazaretto should not be relied on
 for completely safe isolation, the file system and so forth can still be accessed so you still need 
 containers/vms for safe isolation of user code.
 
@@ -139,7 +139,7 @@ Core modules can also have a `<name>/promises` path that exports promisified ver
       return {
         __proto__: fs,
         readFile,
-        promisies: {
+        promises: {
           readFile: promisify(readFile)
         }
       }
