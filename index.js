@@ -49,8 +49,8 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
             const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
             let exports = null
-            if (global[Symbol.for('kLazarettoEntryModule')]) {
-              const mod = global[Symbol.for('kLazarettoEntryModule')]
+            if (await global[Symbol.for('kLazarettoEntryModule')]) {
+              const mod = await global[Symbol.for('kLazarettoEntryModule')]
               const target = typeof mod.default === 'function' ? mod.default : mod
               exports = new Proxy(target, { get (o, p) { 
                 return 'p' in mod ? mod[p] : (mod.default ? mod.default[p] : undefined)
