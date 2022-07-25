@@ -2,12 +2,14 @@
 const { pathToFileURL } = require('url')
 const { join } = require('path')
 const { promisify } = require('util')
-const { readFile } = require('fs').promises
+const { mkdtemp, writeFile, readFile, rm } = require('fs').promises
 const { Worker } = require('worker_threads')
 const mockery = require('./lib/mockery')
 const cp = require('child_process')
+const os = require('os')
 
 async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, teardown, returnOnError = false, prefix = '' } = {}) {
+
   if (Array.isArray(scope) === false) scope = [scope]
 
   if (returnOnError === true) returnOnError = (err) => err
@@ -56,11 +58,15 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
                 return 'p' in mod ? mod[p] : (mod.default ? mod.default[p] : undefined)
               }})
             } else { 
-              exports = module.exports
+              try { exports = module.exports } catch { exports = {} }
             }
             let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { include, args, context: global[Symbol.for('kLazarettoContext')]}})
             if (result === exports) {
-              result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
+              try {
+                result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
+              } catch {
+                result = {}
+              }
             }
             this.postMessage([cmd, result])
           }
@@ -81,10 +87,10 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const contents = await readFile(entry, 'utf8')
 
   const code = `${prefix}${overrides}${shims}${comms}${contents}`
-  const base64 = Buffer.from(code).toString('base64')
-  const exec = esm
-    ? new URL(`data:esm;${entry},${base64}`)
-    : new URL(`data:cjs;${entry},${base64}`)
+
+  const inject = entry + '.lazaretto.' + Date.now() + (esm ? '.mjs' : '.cjs')
+  await writeFile(inject, code)
+  const exec = new URL(pathToFileURL(inject))
 
   if (esm) {
     process.env.LAZARETTO_LOADER_DATA_URL = exec.href
@@ -117,14 +123,20 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
   const sandbox = async (code, ...args) => {
     if (returnOnError === false) {
-      const [result] = await hook('expr', [code, ...args])
-      return result
+      try {
+        const [result] = await hook('expr', [code, ...args])
+        return result
+      } finally {
+        await rm(inject)
+      }
     }
     try {
       const [result] = await hook('expr', [code, ...args])
       return result
     } catch (err) {
       return returnOnError(err)
+    } finally {
+      await rm(inject)
     }
   }
 
@@ -172,7 +184,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
           : stack[0]
 
         let restack = esm
-          ? err.stack.replace(RegExp(`data:text/javascript;base64,${base64}`.replace(/([+|/])/g, '\\$1'), 'gm'), entry)
+          ? err.stack
           : err.stack.replace(/\[worker eval\]:/gm, entry + ':')
 
         if (esm && !frame && err instanceof SyntaxError) {
