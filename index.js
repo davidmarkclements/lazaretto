@@ -77,12 +77,13 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
         }
       }
-      wt.parentPort.on('message', cmds)
+      if (wt.parentPort) wt.parentPort.on('message', cmds)
     }
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
 
   const code = `${prefix}${overrides}${shims}${comms}${contents}`
+
   const base64 = Buffer.from(code).toString('base64')
   const exec = esm
     ? new URL(`data:esm;${entry},${base64}`)
