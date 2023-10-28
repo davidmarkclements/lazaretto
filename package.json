@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/davidmarkclements/lazaretto#readme",
   "devDependencies": {
-    "standard": "^14.3.4"
+    "standard": "^17.1.0"
   },
   "dependencies": {
     "escape-string-regexp": "^4.0.0"

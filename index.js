@@ -43,7 +43,9 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       async function cmds ([cmd, args] = []) {
         try {
           if (cmd === 'init') this.postMessage([cmd])
-          if (cmd === 'sync') this.postMessage([cmd, wt.workerData.context, Array.from(global[Symbol.for('kLazarettoMocksLoaded')])])
+          if (cmd === 'sync') {
+            this.postMessage([cmd, wt.workerData.context, Array.from(global[Symbol.for('kLazarettoMocksLoaded')])])
+          }
           if (cmd === 'expr') {
             const expr = args.shift()
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
@@ -97,7 +99,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     execArgv: [
       ...process.execArgv,
       '--no-warnings',
-      `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`
+      `--import=${join(__dirname, 'lib', 'hook.mjs')}`
     ]
   })
   let online = false
