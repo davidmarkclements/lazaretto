@@ -51,18 +51,18 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
             const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
             let exports = null
-            if (await global[Symbol.for('kLazarettoEntryModule')]) {
-              const mod = await global[Symbol.for('kLazarettoEntryModule')]
+            const mod = await import('data:lazaretto;esm')
+            if (mod) {
               const target = typeof mod.default === 'function' ? mod.default : mod
               exports = new Proxy(target, { get (o, p) { 
                 return 'p' in mod ? mod[p] : (mod.default ? mod.default[p] : undefined)
               }})
-            } else { 
+            } else {
               exports = module.exports
             }
             let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { include, args, context: global[Symbol.for('kLazarettoContext')]}})
             if (result === exports) {
-              result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
+              result = mod || module.exports
             }
             this.postMessage([cmd, result])
           }
@@ -83,7 +83,6 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
   const contents = await readFile(entry, 'utf8')
 
   const code = `${prefix}${overrides}${shims}${comms}${contents}`
-
   const base64 = Buffer.from(code).toString('base64')
   const exec = esm
     ? new URL(`data:esm;${entry},${base64}`)
