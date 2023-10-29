@@ -40,6 +40,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       const wt = ${include}('worker_threads')
       const { createInclude } = ${include}('${require.resolve('./lib/include')}')
       const include = createInclude('${entry}')
+      const cjs = typeof arguments !== 'undefined'
       async function cmds ([cmd, args] = []) {
         try {
           if (cmd === 'init') this.postMessage([cmd])
@@ -51,7 +52,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
             const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
             let exports = null
-            const mod = await import('data:lazaretto;esm')
+            const mod = cjs ? null : await import('data:lazaretto;esm')
             if (mod) {
               const target = typeof mod.default === 'function' ? mod.default : mod
               exports = new Proxy(target, { get (o, p) { 
