@@ -4,7 +4,7 @@
 
 ## Support
 
-* Node 14+
+* Node 20+
 
 ## About
 
