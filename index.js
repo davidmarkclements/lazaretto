@@ -40,27 +40,30 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
       const wt = ${include}('worker_threads')
       const { createInclude } = ${include}('${require.resolve('./lib/include')}')
       const include = createInclude('${entry}')
+      const cjs = typeof arguments !== 'undefined'
       async function cmds ([cmd, args] = []) {
         try {
           if (cmd === 'init') this.postMessage([cmd])
-          if (cmd === 'sync') this.postMessage([cmd, wt.workerData.context, Array.from(global[Symbol.for('kLazarettoMocksLoaded')])])
+          if (cmd === 'sync') {
+            this.postMessage([cmd, wt.workerData.context, Array.from(global[Symbol.for('kLazarettoMocksLoaded')])])
+          }
           if (cmd === 'expr') {
             const expr = args.shift()
             const script = new vm.Script(expr, {filename: 'Lazaretto'})
             const thisContext = Object.getOwnPropertyNames(global).reduce((o, k) => { o[k] = global[k];return o}, {})
             let exports = null
-            if (await global[Symbol.for('kLazarettoEntryModule')]) {
-              const mod = await global[Symbol.for('kLazarettoEntryModule')]
+            const mod = cjs ? null : await import('data:lazaretto;esm')
+            if (mod) {
               const target = typeof mod.default === 'function' ? mod.default : mod
               exports = new Proxy(target, { get (o, p) { 
                 return 'p' in mod ? mod[p] : (mod.default ? mod.default[p] : undefined)
               }})
-            } else { 
+            } else {
               exports = module.exports
             }
             let result = await script.runInNewContext({...thisContext,...(${scoping}), exports, $$$: { include, args, context: global[Symbol.for('kLazarettoContext')]}})
             if (result === exports) {
-              result = global[Symbol.for('kLazarettoEntryModule')] || module.exports
+              result = mod || module.exports
             }
             this.postMessage([cmd, result])
           }
@@ -75,7 +78,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
 
         }
       }
-      wt.parentPort.on('message', cmds)
+      if (wt.parentPort) wt.parentPort.on('message', cmds)
     }
   `.split('\n').map((s) => s.trim() + ';').join('')
   const contents = await readFile(entry, 'utf8')
@@ -97,7 +100,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     execArgv: [
       ...process.execArgv,
       '--no-warnings',
-      `--experimental-loader=${join(__dirname, 'lib', 'loader.mjs')}`
+      `--import=${join(__dirname, 'lib', 'hook.mjs')}`
     ]
   })
   let online = false

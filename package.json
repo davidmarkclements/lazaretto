@@ -1,6 +1,6 @@
 {
   "name": "lazaretto",
-  "version": "3.0.4",
+  "version": "4.0.0-rc.4",
   "description": "Run esm and/or cjs code in a separate V8 isolate with code-injection capabilities",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/davidmarkclements/lazaretto#readme",
   "devDependencies": {
-    "standard": "^14.3.4"
+    "standard": "^17.1.0"
   },
   "dependencies": {
     "escape-string-regexp": "^4.0.0"
