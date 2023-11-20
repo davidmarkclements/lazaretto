@@ -26,10 +26,10 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
     ? `import.meta.url = '${entryUrl}';global[Symbol.for('kLazarettoImportMeta')] = import.meta;`
     : `module.id = '.'; module.parent = null; require.main = module;${mocking ? mocking.scopeMocks() : ''};`
   const overrides = `
-    process.chdir = () => {
+    global.process.chdir = () => {
       process.stderr.write('Lazaretto: process.chdir is not supported\\n')
     }
-    process.abort = () => {
+    global.process.abort = () => {
       process.stderr.write('Lazeretto: Abort is not supported but will exit\\n' + Error().stack + '\\n')
       process.exit(1)
     }
