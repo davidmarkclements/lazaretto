@@ -191,7 +191,7 @@ async function lazaretto ({ esm = false, entry, scope = [], context = {}, mock, 
           const escrx = require('escape-string-regexp') // lazy require
           const msgRx = RegExp(escrx(err.message))
           err = Object.create(err)
-          err.stack = restack
+          Object.defineProperty(err, 'stack', { value: restack })
           err.line = line
           err.esm = esm
           if (err.name === 'DataCloneError' && cmd === 'expr') {
